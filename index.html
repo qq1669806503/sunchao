@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#fff5f8">
+<title>宝宝今天吃什么</title>
+<style>
+:root{
+  --primary:#ff8fab; --primary-ink:#e0708c; --primary-soft:#ffe3ea;
+  --accent:#ffd166; --bg:#fff5f8; --card:#ffffff; --text:#5a4a52;
+  --muted:#a08e97; --dot:rgba(255,143,171,.28); --radius:22px;
+  --font:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --shadow:0 8px 18px rgba(0,0,0,.10); --bg-img-opacity:0;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+html,body{margin:0;padding:0;overflow-x:hidden;-webkit-text-size-adjust:100%}
+body{
+  font-family:var(--font);background:var(--bg);color:var(--text);
+  min-height:100vh;min-height:100dvh;-webkit-font-smoothing:antialiased;
+  -webkit-overflow-scrolling:touch;overscroll-behavior-y:none;
+  transition:background .3s,color .3s;
+}
+.bg-photo{position:fixed;inset:0;z-index:0;pointer-events:none;background-position:center;background-size:cover;background-repeat:no-repeat;opacity:var(--bg-img-opacity,0);transition:opacity .3s;-webkit-transform:translateZ(0);transform:translateZ(0)}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;background-image:radial-gradient(var(--dot) 2.2px,transparent 2.2px);background-size:26px 26px;opacity:.85;transition:opacity .3s;-webkit-transform:translateZ(0);transform:translateZ(0)}
+body.no-deco::before{opacity:0}
+body.has-bg-photo::before{opacity:.16}
+#app{position:relative;z-index:2;max-width:640px;margin:0 auto;padding:0 16px calc(220px + env(safe-area-inset-bottom));min-height:100vh;min-height:100dvh}
+
+.topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;padding:calc(12px + env(safe-area-inset-top)) 0 12px;background:var(--bg);transition:background .3s}
+.brand{display:flex;align-items:center;gap:10px}
+.logo{font-size:30px;display:inline-block;animation:float 3s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0) rotate(-5deg)}50%{transform:translateY(-5px) rotate(5deg)}}
+.brand-txt h1{font-size:19px;margin:0;line-height:1.2;letter-spacing:.5px}
+.brand-txt p{margin:3px 0 0;font-size:11px;color:var(--muted)}
+.icon-btn{width:40px;height:40px;border-radius:14px;border:none;background:var(--card);color:var(--text);font-size:17px;cursor:pointer;box-shadow:var(--shadow);display:grid;place-items:center;transition:transform .15s;flex:0 0 auto}
+.icon-btn:active{transform:scale(.9)}
+.icon-btn.small{width:32px;height:32px;font-size:14px;border-radius:10px}
+
+.cat-scroll{display:flex;gap:8px;overflow-x:auto;padding:6px 2px 14px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.cat-scroll::-webkit-scrollbar{display:none}
+.cat-chip{flex:0 0 auto;padding:9px 16px;border-radius:999px;background:var(--card);border:2px solid transparent;color:var(--muted);font-size:13.5px;font-weight:700;font-family:inherit;cursor:pointer;transition:.18s;box-shadow:0 2px 10px rgba(0,0,0,.05)}
+.cat-chip.active{background:var(--primary);color:#fff;border-color:var(--primary-ink);transform:translateY(-2px);box-shadow:var(--shadow)}
+.cat-chip.random{color:var(--primary-ink);border-color:var(--primary-soft)}
+.cat-chip.random:active{transform:scale(.94)}
+
+.dish-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:12px}
+.dish{position:relative;background:var(--card);border-radius:var(--radius);padding:14px 12px;border:2px solid var(--primary-soft);cursor:pointer;display:flex;flex-direction:column;gap:6px;box-shadow:0 4px 14px rgba(0,0,0,.045);transition:transform .18s cubic-bezier(.34,1.56,.64,1),border-color .18s,box-shadow .18s,background .18s;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.dish:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
+.dish:active{transform:scale(.96)}
+.dish.on{border-color:var(--primary);background:linear-gradient(180deg,var(--primary-soft),var(--card) 72%)}
+.dish .emoji{font-size:29px;line-height:1}
+.dish-img{width:calc(100% + 24px);margin:-14px -12px 8px;height:96px;object-fit:cover;border-radius:calc(var(--radius) - 2px) calc(var(--radius) - 2px) 0 0;display:block;background:var(--primary-soft);pointer-events:none;-webkit-user-drag:none;user-select:none;-webkit-touch-callout:none}
+.dish .name{font-weight:700;font-size:14.5px;line-height:1.3}
+.dish .meta{font-size:11px;color:var(--muted);display:flex;gap:5px;align-items:center}
+.dish .badge{position:absolute;top:6px;right:40px;min-width:22px;height:22px;padding:0 5px;border-radius:999px;background:var(--primary);color:#fff;font-size:12px;font-weight:800;display:grid;place-items:center;animation:pop .3s;box-shadow:0 3px 8px rgba(0,0,0,.18);z-index:2}
+@keyframes pop{0%{transform:scale(.3)}60%{transform:scale(1.18)}100%{transform:scale(1)}}
+.dish-del{position:absolute;top:6px;right:6px;z-index:3;width:28px;height:28px;border-radius:50%;border:none;background:rgba(255,255,255,.9);color:var(--muted);font-size:13px;cursor:pointer;display:grid;place-items:center;box-shadow:0 2px 8px rgba(0,0,0,.12);transition:.18s;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);font-family:inherit;line-height:1;padding:0}
+.dish-del:hover{background:#ffd9de;color:#d6455a;transform:scale(1.08)}
+.dish-del:active{transform:scale(.9)}
+.dish.add-dish{border-style:dashed;background:transparent;box-shadow:none;color:var(--muted);align-items:center;justify-content:center;text-align:center;min-height:112px}
+.dish.add-dish .name{font-size:13px;font-weight:600}
+
+.cart-bar{position:fixed;left:50%;bottom:calc(76px + env(safe-area-inset-bottom));transform:translateX(-50%);width:calc(100% - 32px);max-width:608px;z-index:35;background:var(--primary);color:#fff;border-radius:999px;padding:12px 10px 12px 20px;display:flex;align-items:center;justify-content:space-between;gap:10px;box-shadow:0 10px 26px rgba(0,0,0,.18);transition:transform .28s cubic-bezier(.34,1.4,.64,1),opacity .28s,bottom .2s}
+.cart-bar.hide{transform:translate(-50%,160%);opacity:0;pointer-events:none}
+.cart-left{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700}
+.cart-left b{font-size:17px}
+.cart-ico{font-size:20px}
+.cart-go{border:none;background:#fff;color:var(--primary-ink);font-family:inherit;font-weight:800;font-size:13.5px;padding:9px 18px;border-radius:999px;cursor:pointer;transition:transform .15s}
+.cart-go:active{transform:scale(.94)}
+
+.tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:640px;z-index:40;display:flex;background:var(--card);border-top:2px solid var(--primary-soft);border-radius:24px 24px 0 0;padding:8px 10px calc(8px + env(safe-area-inset-bottom));box-shadow:0 -6px 22px rgba(0,0,0,.06);transition:background .3s}
+.tabbar button{flex:1;border:none;background:none;font-family:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;font-weight:700;color:var(--muted);padding:6px 0;border-radius:16px;transition:.2s}
+.tabbar button .ico{font-size:20px;line-height:1.1}
+.tabbar button.active{color:var(--primary-ink);background:var(--primary-soft)}
+
+.view[hidden]{display:none}
+
+.mask{position:fixed;inset:0;background:rgba(0,0,0,.38);z-index:50;opacity:0;pointer-events:none;transition:opacity .25s}
+.mask.show{opacity:1;pointer-events:auto}
+
+.sheet{position:fixed;left:50%;bottom:var(--kb,0px);transform:translate(-50%,105%);width:100%;max-width:640px;max-height:86vh;max-height:calc(86dvh - var(--kb,0px));z-index:60;background:var(--bg);border-radius:28px 28px 0 0;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -12px 44px rgba(0,0,0,.22);transition:transform .32s cubic-bezier(.34,1.4,.64,1),bottom .2s,max-height .2s}
+.sheet.show{transform:translate(-50%,0)}
+.sheet-handle{width:44px;height:5px;border-radius:999px;background:var(--primary-soft);margin:10px auto 0;flex:0 0 auto}
+.sheet-head{display:flex;align-items:center;justify-content:space-between;padding:12px 20px 8px}
+.sheet-head h3{margin:0;font-size:16px}
+.sheet-body{flex:1;overflow-y:auto;padding:8px 20px 16px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.sheet-foot{padding:12px 20px calc(16px + env(safe-area-inset-bottom));border-top:2px solid var(--primary-soft);background:var(--card);flex:0 0 auto}
+.foot-info{font-size:12.5px;color:var(--muted);margin-bottom:10px;font-weight:600}
+.foot-info b{color:var(--primary-ink);font-size:15px}
+
+.drawer{position:fixed;top:0;right:0;height:100%;width:min(380px,90vw);z-index:70;background:var(--bg);transform:translateX(105%);transition:transform .32s cubic-bezier(.34,1.3,.64,1);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:calc(20px + env(safe-area-inset-top)) 20px calc(40px + env(safe-area-inset-bottom));box-shadow:-12px 0 44px rgba(0,0,0,.18)}
+.drawer.show{transform:translateX(0)}
+.drawer-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.drawer-head h3{margin:0;font-size:17px}
+
+.btn-primary{width:100%;border:none;border-radius:999px;padding:15px;font-family:inherit;font-size:15px;font-weight:800;color:#fff;background:var(--primary);cursor:pointer;box-shadow:0 8px 20px rgba(0,0,0,.15);transition:transform .15s}
+.btn-primary:active{transform:scale(.97)}
+.btn-primary.small{width:auto;padding:10px 18px;font-size:13px}
+.btn-ghost{width:100%;border:2px dashed var(--primary-soft);border-radius:16px;padding:13px;background:transparent;color:var(--muted);font-family:inherit;font-size:13.5px;font-weight:700;cursor:pointer;transition:.2s}
+.btn-ghost:active{transform:scale(.97)}
+.btn-danger{width:100%;border:2px solid rgba(220,70,90,.35);border-radius:16px;padding:13px;background:transparent;color:#d6455a;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer;transition:.2s;margin-top:10px}
+.btn-danger:active{transform:scale(.97)}
+.input{width:100%;padding:13px 15px;border-radius:15px;border:2px solid var(--primary-soft);background:var(--card);font-family:inherit;font-size:16px;color:var(--text);outline:none;transition:.2s;-webkit-appearance:none;appearance:none}
+.input:focus{border-color:var(--primary)}
+.row{margin-bottom:18px}
+.row>label{display:block;font-size:12.5px;font-weight:800;color:var(--muted);margin-bottom:9px;letter-spacing:.3px}
+.row>label b{color:var(--primary-ink)}
+.tip{font-size:11.5px;color:var(--muted);text-align:center;margin-top:16px;opacity:.8}
+
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{flex:1;min-width:62px;padding:10px 6px;border-radius:13px;border:2px solid var(--primary-soft);background:var(--card);color:var(--muted);font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;transition:.18s}
+.seg button.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:8px;border-radius:999px;background:var(--primary-soft);outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:var(--primary);border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.2);cursor:pointer}
+
+.preset-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.preset{display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:15px;border:2px solid var(--primary-soft);background:var(--card);font-family:inherit;font-size:12.5px;font-weight:700;color:var(--text);cursor:pointer;transition:.18s}
+.preset.on{border-color:var(--primary);background:var(--primary-soft)}
+.swatch{width:22px;height:22px;border-radius:8px;flex:0 0 auto;box-shadow:inset 0 0 0 2px rgba(255,255,255,.55)}
+
+.color-pick{display:flex;flex-wrap:wrap;gap:8px}
+.color-dot{width:28px;height:28px;border-radius:50%;border:3px solid transparent;cursor:pointer;transition:.15s}
+.color-dot.on{border-color:#fff;box-shadow:0 0 0 3px var(--primary)}
+
+.switch{width:56px;height:32px;border-radius:999px;border:none;background:var(--primary-soft);position:relative;cursor:pointer;padding:0;transition:.25s}
+.switch span{position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.18);transition:.25s}
+.switch.on{background:var(--primary)}
+.switch.on span{left:27px}
+
+.upload-box{position:relative;border:2px dashed var(--primary-soft);border-radius:16px;background:var(--card);min-height:96px;display:grid;place-items:center;cursor:pointer;overflow:hidden;transition:.2s}
+.upload-box:active{transform:scale(.985)}
+.upload-box .ph{font-size:12.5px;color:var(--muted);font-weight:700;text-align:center;padding:18px 14px;line-height:1.7}
+.upload-box .ph small{display:block;font-weight:500;opacity:.75;font-size:11px;margin-top:2px}
+.upload-box img.up-img{width:100%;max-height:190px;object-fit:cover;display:block;-webkit-touch-callout:none;user-select:none;-webkit-user-drag:none}
+.upload-box .rm{position:absolute;top:8px;right:8px;width:28px;height:28px;border-radius:999px;border:none;background:rgba(0,0,0,.55);color:#fff;font-size:13px;cursor:pointer;display:grid;place-items:center;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:2}
+
+.cart-item{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1.5px dashed var(--primary-soft)}
+.cart-item:last-child{border-bottom:none}
+.ci-emoji{font-size:24px;flex:0 0 auto;line-height:1}
+.ci-thumb{width:38px;height:38px;border-radius:11px;object-fit:cover;display:block;background:var(--primary-soft);cursor:zoom-in;transition:transform .15s;-webkit-touch-callout:none;user-select:none;-webkit-user-drag:none}
+.ci-thumb:active{transform:scale(.92)}
+.ci-main{flex:1;min-width:0}
+.ci-name{font-size:14px;font-weight:700;line-height:1.35}
+.ci-note{width:100%;border:none;background:transparent;font-family:inherit;font-size:16px;color:var(--muted);outline:none;padding:2px 0 0;-webkit-appearance:none;appearance:none}
+.ci-note::placeholder{color:var(--muted);opacity:.55}
+.stepper{display:flex;align-items:center;gap:9px;flex:0 0 auto}
+.stepper button{width:28px;height:28px;border-radius:50%;border:none;background:var(--primary-soft);color:var(--primary-ink);font-size:17px;font-weight:800;line-height:1;cursor:pointer;display:grid;place-items:center;font-family:inherit;transition:transform .12s}
+.stepper button:active{transform:scale(.85)}
+.stepper span{min-width:18px;text-align:center;font-size:14px;font-weight:800}
+
+.order-card{background:var(--card);border-radius:var(--radius);padding:16px;margin-bottom:14px;border:2px solid var(--primary-soft);box-shadow:0 4px 16px rgba(0,0,0,.05);animation:slideUp .35s cubic-bezier(.34,1.4,.64,1)}
+@keyframes slideUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.oc-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px}
+.oc-title{font-size:15px;font-weight:800}
+.oc-time{font-size:11.5px;color:var(--muted)}
+.oc-list{display:flex;flex-direction:column;gap:8px}
+.check-item{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:11px 12px;border-radius:15px;background:var(--bg);cursor:pointer;transition:.2s;user-select:none}
+.check-item:active{transform:scale(.985)}
+.check-item.done{opacity:.45}
+.check-item.done .ci-name{text-decoration:line-through}
+.checkbox{width:22px;height:22px;border-radius:8px;border:2.5px solid var(--primary);flex:0 0 auto;display:grid;place-items:center;font-size:13px;font-weight:800;color:#fff;transition:.2s}
+.check-item.done .checkbox{background:var(--primary)}
+.check-item .qty{font-size:12.5px;font-weight:800;color:var(--primary-ink);margin-left:auto}
+.check-item .note{flex:1 0 100%;font-size:11.5px;color:var(--muted);padding-left:32px;margin-top:-2px}
+.oc-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px;padding-top:12px;border-top:1.5px dashed var(--primary-soft);font-size:12.5px;color:var(--muted);font-weight:700}
+
+.empty-big{text-align:center;padding:60px 20px;color:var(--muted)}
+.empty-big .eb-emoji{font-size:52px;display:block;margin-bottom:14px;animation:float 3s ease-in-out infinite}
+.empty-big p{margin:5px 0;font-size:14px;font-weight:700}
+.empty-big p.muted{font-weight:500;font-size:12.5px;opacity:.8}
+.empty{text-align:center;padding:44px 20px;color:var(--muted);font-size:13.5px;line-height:1.9;font-weight:600}
+
+.hist-card{background:var(--card);border-radius:var(--radius);padding:15px 16px;margin-bottom:12px;border:2px solid var(--primary-soft);box-shadow:0 3px 12px rgba(0,0,0,.04);transition:opacity .25s,transform .25s}
+.hist-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;gap:8px}
+.hist-date{font-size:12.5px;font-weight:800;color:var(--primary-ink)}
+.hist-tag{font-size:10.5px;background:var(--primary-soft);color:var(--primary-ink);padding:3px 9px;border-radius:999px;font-weight:800}
+.hist-tools{display:flex;align-items:center;gap:6px;flex:0 0 auto}
+.hist-del{border:none;background:transparent;color:var(--muted);font-size:14px;cursor:pointer;width:28px;height:28px;border-radius:10px;display:grid;place-items:center;transition:.15s;padding:0}
+.hist-del:hover{background:rgba(214,69,90,.12);color:#d6455a}
+.hist-items{font-size:13px;line-height:1.9;color:var(--text)}
+.hist-items .hi{display:inline-flex;align-items:center;gap:4px;margin-right:9px}
+.hi-thumb{width:22px;height:22px;border-radius:7px;object-fit:cover;display:inline-block;vertical-align:-5px;background:var(--primary-soft);cursor:zoom-in;transition:transform .15s;-webkit-touch-callout:none;user-select:none;-webkit-user-drag:none}
+.hi-thumb:active{transform:scale(.9)}
+.hist-foot{margin-top:11px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.hist-foot .again{border:none;background:var(--primary-soft);color:var(--primary-ink);font-family:inherit;font-size:12px;font-weight:800;padding:7px 15px;border-radius:999px;cursor:pointer;transition:transform .15s;flex:0 0 auto}
+.hist-foot .again:active{transform:scale(.93)}
+
+.emoji-pick{display:flex;flex-wrap:wrap;gap:6px;font-size:22px}
+.emoji-pick span{width:40px;height:40px;display:grid;place-items:center;border-radius:13px;background:var(--card);border:2px solid var(--primary-soft);cursor:pointer;transition:.15s}
+.emoji-pick span.on{border-color:var(--primary);background:var(--primary-soft);transform:scale(1.08)}
+
+.lightbox{position:fixed;inset:0;z-index:120;background:rgba(18,13,20,.88);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;padding:calc(24px + env(safe-area-inset-top)) 20px calc(28px + env(safe-area-inset-bottom));opacity:0;pointer-events:none;transition:opacity .25s}
+.lightbox.show{opacity:1;pointer-events:auto}
+.lb-inner{width:100%;max-width:520px;display:flex;flex-direction:column;align-items:center;gap:16px;transform:scale(.92);transition:transform .28s cubic-bezier(.34,1.4,.64,1)}
+.lightbox.show .lb-inner{transform:scale(1)}
+.lb-img{max-width:100%;max-height:62vh;object-fit:contain;display:block;border-radius:20px;background:#fff;box-shadow:0 22px 60px rgba(0,0,0,.55);-webkit-touch-callout:none;user-select:none;-webkit-user-drag:none}
+.lb-info{text-align:center;color:#fff;padding:0 10px}
+.lb-name{font-size:20px;font-weight:800;letter-spacing:.5px;line-height:1.35}
+.lb-meta{font-size:12px;opacity:.66;margin-top:5px;font-weight:600;letter-spacing:.3px}
+.lb-add{max-width:290px}
+.lb-close{position:absolute;top:calc(14px + env(safe-area-inset-top));right:14px;width:44px;height:44px;border-radius:50%;border:none;background:rgba(255,255,255,.16);color:#fff;font-size:17px;cursor:pointer;display:grid;place-items:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:transform .15s,background .2s}
+.lb-close:hover{background:rgba(255,255,255,.26)}
+.lb-close:active{transform:scale(.88)}
+.lb-hint{position:absolute;bottom:calc(14px + env(safe-area-inset-bottom));left:0;right:0;text-align:center;font-size:11px;color:rgba(255,255,255,.45);font-weight:600;pointer-events:none}
+
+.toast{position:fixed;left:50%;top:calc(76px + env(safe-area-inset-top));transform:translate(-50%,-24px);z-index:200;background:rgba(0,0,0,.82);color:#fff;font-size:13.5px;font-weight:700;padding:11px 22px;border-radius:999px;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;white-space:nowrap;max-width:88vw;text-align:center;overflow:hidden;text-overflow:ellipsis}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+
+<div class="bg-photo" id="bgPhoto"></div>
+
+<div id="app">
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">👶</span>
+      <div class="brand-txt">
+        <h1>宝宝今天吃什么</h1>
+        <p>一家人的小食堂</p>
+      </div>
+    </div>
+    <button class="icon-btn" id="themeBtn" title="换装">🎨</button>
+  </header>
+
+  <main>
+    <section class="view" id="view-order">
+      <div class="cat-scroll" id="cats"></div>
+      <div class="dish-grid" id="dishGrid"></div>
+    </section>
+    <section class="view" id="view-kitchen" hidden><div id="kitchenBox"></div></section>
+    <section class="view" id="view-history" hidden><div id="historyBox"></div></section>
+  </main>
+</div>
+
+<div class="cart-bar hide" id="cartBar"></div>
+
+<nav class="tabbar" id="tabbar">
+  <button data-view="order" class="active"><span class="ico">🍽️</span><span>点菜</span></button>
+  <button data-view="kitchen"><span class="ico">👩‍🍳</span><span>厨房</span></button>
+  <button data-view="history"><span class="ico">📜</span><span>记录</span></button>
+</nav>
+
+<div class="mask" id="mask"></div>
+
+<div class="sheet" id="cartSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head"><h3>🧺 我的点菜清单</h3><button class="icon-btn small" data-close>✕</button></div>
+  <div class="sheet-body" id="cartList"></div>
+  <div class="sheet-foot">
+    <div class="foot-info" id="cartFootInfo"></div>
+    <button class="btn-primary" id="submitOrder">提交给大厨 👨‍🍳</button>
+  </div>
+</div>
+
+<div class="sheet" id="addSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head"><h3 id="addSheetTitle">➕ 添加一道菜</h3><button class="icon-btn small" data-close>✕</button></div>
+  <div class="sheet-body">
+    <div class="row">
+      <label>菜品照片 <span style="opacity:.65;font-weight:600">（可选）</span></label>
+      <div class="upload-box" id="uploadBox">
+        <div id="imgPreview"></div>
+        <input type="file" id="imgInput" accept="image/*" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
+      </div>
+    </div>
+    <div class="row"><label>菜名</label><input class="input" id="newName" placeholder="例如：妈妈的拿手红烧肉" maxlength="12"></div>
+    <div class="row">
+      <label>分类</label>
+      <div class="seg" id="newCatSeg">
+        <button data-cat="家常菜" class="on">家常菜</button><button data-cat="硬菜">硬菜</button>
+        <button data-cat="汤羹">汤羹</button><button data-cat="主食">主食</button>
+        <button data-cat="甜品">甜品</button><button data-cat="饮品">饮品</button>
+      </div>
+    </div>
+    <div class="row"><label>选个图标 <span style="opacity:.65;font-weight:600">（没有照片时显示）</span></label><div class="emoji-pick" id="emojiPick"></div></div>
+    <button class="btn-primary" id="saveDish">加入菜单</button>
+    <button class="btn-danger" id="deleteDish" style="display:none">删除这道菜</button>
+  </div>
+</div>
+
+<div class="drawer" id="drawer"><div id="themeBody"></div></div>
+
+<div class="lightbox" id="lightbox">
+  <button class="lb-close" id="lbClose" title="关闭">✕</button>
+  <div class="lb-inner">
+    <img class="lb-img" id="lbImg" alt="菜品照片">
+    <div class="lb-info"><div class="lb-name" id="lbName"></div><div class="lb-meta" id="lbMeta"></div></div>
+    <button class="btn-primary lb-add" id="lbAdd">加入清单 🧺</button>
+  </div>
+  <div class="lb-hint">点击空白处关闭</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+
+function hexToRgb(h){h=h.replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');const n=parseInt(h,16);return{r:(n>>16)&255,g:(n>>8)&255,b:n&255}}
+function rgbToHex(r,g,b){const h=v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0');return'#'+h(r)+h(g)+h(b)}
+function mix(a,b,t){const A=hexToRgb(a),B=hexToRgb(b);return rgbToHex(A.r+(B.r-A.r)*t,A.g+(B.g-A.g)*t,A.b+(B.b-A.b)*t)}
+const lighten=(c,t)=>mix(c,'#ffffff',t), darken=(c,t)=>mix(c,'#000000',t);
+const rgba=(h,a)=>{const{r,g,b}=hexToRgb(h);return`rgba(${r},${g},${b},${a})`};
+const lum=h=>{const{r,g,b}=hexToRgb(h);return(0.299*r+0.587*g+0.114*b)/255};
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function fmtTime(ts){const d=new Date(ts),p=n=>String(n).padStart(2,'0');return`${d.getMonth()+1}月${d.getDate()}日 ${p(d.getHours())}:${p(d.getMinutes())}`}
+
+const LS_KEY='familyMenu.v4';
+const CATS=['全部','家常菜','硬菜','汤羹','主食','甜品','饮品'];
+const DEFAULT_DISHES=[
+  {id:'a1',name:'番茄炒蛋',cat:'家常菜',emoji:'🍅',time:10},
+  {id:'a2',name:'青椒土豆丝',cat:'家常菜',emoji:'🥔',time:15},
+  {id:'a3',name:'麻婆豆腐',cat:'家常菜',emoji:'🌶️',time:20},
+  {id:'a4',name:'红烧茄子',cat:'家常菜',emoji:'🍆',time:20},
+  {id:'a5',name:'清炒时蔬',cat:'家常菜',emoji:'🥬',time:10},
+  {id:'a6',name:'蒜蓉西兰花',cat:'家常菜',emoji:'🥦',time:12},
+  {id:'a7',name:'可乐鸡翅',cat:'家常菜',emoji:'🍗',time:25},
+  {id:'a8',name:'鱼香肉丝',cat:'家常菜',emoji:'🥕',time:20},
+  {id:'b1',name:'红烧肉',cat:'硬菜',emoji:'🍖',time:60},
+  {id:'b2',name:'糖醋排骨',cat:'硬菜',emoji:'🍯',time:50},
+  {id:'b3',name:'宫保鸡丁',cat:'硬菜',emoji:'🥜',time:25},
+  {id:'b4',name:'清蒸鲈鱼',cat:'硬菜',emoji:'🐟',time:30},
+  {id:'b5',name:'水煮牛肉',cat:'硬菜',emoji:'🥩',time:35},
+  {id:'b6',name:'干锅花菜',cat:'硬菜',emoji:'🥘',time:25},
+  {id:'c1',name:'紫菜蛋花汤',cat:'汤羹',emoji:'🥣',time:10},
+  {id:'c2',name:'番茄牛腩汤',cat:'汤羹',emoji:'🍲',time:90},
+  {id:'c3',name:'玉米排骨汤',cat:'汤羹',emoji:'🌽',time:60},
+  {id:'c4',name:'冬瓜丸子汤',cat:'汤羹',emoji:'🍜',time:30},
+  {id:'c5',name:'银耳雪梨汤',cat:'汤羹',emoji:'🍐',time:45},
+  {id:'d1',name:'蛋炒饭',cat:'主食',emoji:'🍚',time:12},
+  {id:'d2',name:'葱油拌面',cat:'主食',emoji:'🍝',time:15},
+  {id:'d3',name:'手工饺子',cat:'主食',emoji:'🥟',time:40},
+  {id:'d4',name:'韭菜盒子',cat:'主食',emoji:'🫓',time:30},
+  {id:'d5',name:'番茄鸡蛋面',cat:'主食',emoji:'🍜',time:15},
+  {id:'e1',name:'双皮奶',cat:'甜品',emoji:'🍮',time:40},
+  {id:'e2',name:'红豆沙',cat:'甜品',emoji:'🫘',time:60},
+  {id:'e3',name:'焦糖布丁',cat:'甜品',emoji:'🍰',time:35},
+  {id:'e4',name:'水果拼盘',cat:'甜品',emoji:'🍉',time:5},
+  {id:'f1',name:'柠檬蜂蜜水',cat:'饮品',emoji:'🍋',time:3},
+  {id:'f2',name:'珍珠奶茶',cat:'饮品',emoji:'🧋',time:20},
+  {id:'f3',name:'现磨豆浆',cat:'饮品',emoji:'🥛',time:15},
+  {id:'f4',name:'酸梅汤',cat:'饮品',emoji:'🍹',time:30}
+];
+
+const DEFAULT_THEME={preset:'pink',primary:'#ff8fab',accent:'#ffd166',bg:'#fff5f8',card:'#ffffff',text:'#5a4a52',radius:22,shadow:1,font:'round',deco:true,bgImg:'',bgImgOpacity:100};
+const PRESETS=[
+  {id:'pink',name:'草莓奶昔',primary:'#ff8fab',accent:'#ffd166',bg:'#fff5f8',card:'#ffffff',text:'#5a4a52'},
+  {id:'mint',name:'薄荷苏打',primary:'#4ecdc4',accent:'#ffe66d',bg:'#f2fdfb',card:'#ffffff',text:'#2f4a48'},
+  {id:'cream',name:'奶油布丁',primary:'#f4a261',accent:'#e9c46a',bg:'#fffaf3',card:'#ffffff',text:'#584a3c'},
+  {id:'sky',name:'晴空蓝',primary:'#6c9bd1',accent:'#ffd166',bg:'#f4f9ff',card:'#ffffff',text:'#3a4a5c'},
+  {id:'grape',name:'葡萄汽水',primary:'#a78bfa',accent:'#f9a8d4',bg:'#faf7ff',card:'#ffffff',text:'#4a4063'},
+  {id:'mono',name:'极简白',primary:'#8b8b8b',accent:'#c9c9c9',bg:'#f7f7f7',card:'#ffffff',text:'#3a3a3a'},
+  {id:'night',name:'深夜食堂',primary:'#ff7b9c',accent:'#ffd166',bg:'#1e1b25',card:'#2a2633',text:'#f0e9f0'}
+];
+const FONTS={round:'"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif',system:'system-ui,-apple-system,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif',cute:'"Comic Sans MS","Chalkboard SE","Quicksand","PingFang SC","Microsoft YaHei",cursive'};
+const FONT_NAMES={round:'圆润',system:'系统',cute:'俏皮'};
+
+let store={dishes:DEFAULT_DISHES.map(d=>({...d})),cart:[],orders:[],activeCat:'全部',theme:{...DEFAULT_THEME}};
+
+function save(){try{localStorage.setItem(LS_KEY,JSON.stringify(store))}catch(e){toast('本地空间不足，删掉几张照片试试 😢')}}
+function load(){
+  try{
+    const raw=localStorage.getItem(LS_KEY);
+    if(!raw)return;
+    const s=JSON.parse(raw);
+    if(Array.isArray(s.dishes)&&s.dishes.length)store.dishes=s.dishes;
+    if(Array.isArray(s.cart))store.cart=s.cart;
+    if(Array.isArray(s.orders))store.orders=s.orders;
+    if(s.activeCat)store.activeCat=s.activeCat;
+    if(s.theme)store.theme={...DEFAULT_THEME,...s.theme};
+  }catch(e){console.warn(e)}
+}
+const getDish=id=>store.dishes.find(d=>d.id===id);
+const cartItem=id=>store.cart.find(c=>c.id===id);
+
+function applyTheme(){
+  const t=store.theme,r=document.documentElement,dark=lum(t.bg)<0.5;
+  const ink=dark?lighten(t.primary,.32):darken(t.primary,.18);
+  const soft=mix(t.primary,t.bg,.84);
+  const muted=mix(t.text,t.bg,.42);
+  r.style.setProperty('--primary',t.primary);
+  r.style.setProperty('--primary-ink',ink);
+  r.style.setProperty('--primary-soft',soft);
+  r.style.setProperty('--accent',t.accent);
+  r.style.setProperty('--bg',t.bg);
+  r.style.setProperty('--card',t.card);
+  r.style.setProperty('--text',t.text);
+  r.style.setProperty('--muted',muted);
+  r.style.setProperty('--radius',t.radius+'px');
+  r.style.setProperty('--font',FONTS[t.font]||FONTS.round);
+  r.style.setProperty('--dot',rgba(t.primary,dark?.20:.28));
+  r.style.setProperty('--shadow',`0 ${Math.round(8*t.shadow)}px ${Math.round(20*t.shadow)}px rgba(0,0,0,${(dark?.34:.10)*t.shadow})`);
+  const bgLayer=$('#bgPhoto'),bgImg=t.bgImg||'',bgOp=bgImg?((t.bgImgOpacity==null?100:t.bgImgOpacity)/100):0;
+  if(bgLayer)bgLayer.style.backgroundImage=bgImg?`url("${bgImg}")`:'none';
+  r.style.setProperty('--bg-img-opacity',bgOp);
+  document.body.classList.toggle('no-deco',!t.deco);
+  document.body.classList.toggle('dark',dark);
+  document.body.classList.toggle('has-bg-photo',!!bgImg);
+  const meta=document.querySelector('meta[name=theme-color]')||(()=>{const m=document.createElement('meta');m.name='theme-color';document.head.appendChild(m);return m})();
+  meta.content=t.bg;
+}
+
+function renderCats(){
+  $('#cats').innerHTML=CATS.map(c=>`<button class="cat-chip ${store.activeCat===c?'active':''}" data-cat="${c}">${c}</button>`).join('')+`<button class="cat-chip random" id="randomBtn">🎲 随机配菜</button>`;
+}
+
+function renderDishes(){
+  const list=store.dishes.filter(d=>store.activeCat==='全部'||d.cat===store.activeCat);
+  let html=list.map(d=>{
+    const c=cartItem(d.id);
+    return `<div class="dish ${c?'on':''}" data-id="${d.id}">
+      ${d.img?`<img class="dish-img" src="${d.img}" alt="${esc(d.name)}" loading="lazy" draggable="false">`:`<div class="emoji">${d.emoji}</div>`}
+      <div class="name">${esc(d.name)}</div>
+      <div class="meta"><span>${d.cat}</span><span>·</span><span>${d.time}分钟</span></div>
+      ${c?`<div class="badge">${c.count}</div>`:''}
+      <button class="dish-del" data-del-dish="${d.id}" title="删除这道菜">🗑</button>
+    </div>`;
+  }).join('');
+  html+=`<div class="dish add-dish" id="addDishBtn"><div class="emoji">➕</div><div class="name">添加菜品</div></div>`;
+  $('#dishGrid').innerHTML=html;
+}
+
+function renderCartBar(){
+  const bar=$('#cartBar'),total=store.cart.reduce((s,c)=>s+c.count,0);
+  if(!total){bar.classList.add('hide');return}
+  bar.classList.remove('hide');
+  bar.innerHTML=`<div class="cart-left"><span class="cart-ico">🧺</span><span>已选 <b>${total}</b> 道菜</span></div><button class="cart-go" id="openCart">查看清单 ›</button>`;
+}
+
+function renderCartSheet(){
+  const box=$('#cartList');
+  if(!store.cart.length){box.innerHTML=`<div class="empty">还没有点菜哦～<br>去选几道喜欢的吧 🥰</div>`}
+  else{
+    box.innerHTML=store.cart.map(c=>{
+      const d=getDish(c.id);if(!d)return'';
+      return `<div class="cart-item" data-id="${c.id}">
+        <div class="ci-emoji">${d.img?`<img class="ci-thumb" data-look data-dish="${d.id}" src="${d.img}" alt="">`:d.emoji}</div>
+        <div class="ci-main">
+          <div class="ci-name">${esc(d.name)}</div>
+          <input class="ci-note" data-note="${c.id}" maxlength="20" placeholder="备注：少放辣 / 多加葱…" value="${esc(c.note||'')}">
+        </div>
+        <div class="stepper"><button data-dec="${c.id}">−</button><span>${c.count}</span><button data-inc="${c.id}">+</button></div>
+      </div>`;
+    }).join('');
+  }
+  const totalCount=store.cart.reduce((s,c)=>s+c.count,0);
+  const maxTime=store.cart.reduce((m,c)=>{const d=getDish(c.id);return d?Math.max(m,d.time):m},0);
+  $('#cartFootInfo').innerHTML=totalCount?`共 <b>${totalCount}</b> 道菜 · 大厨预计忙 <b>${maxTime}</b> 分钟`:'空空如也～';
+  $('#submitOrder').disabled=!totalCount;
+  $('#submitOrder').style.opacity=totalCount?1:.45;
+}
+
+function renderKitchen(){
+  const box=$('#kitchenBox'),actives=store.orders.filter(o=>!o.done);
+  if(!actives.length){box.innerHTML=`<div class="empty-big"><span class="eb-emoji">🍳</span><p>暂时没有待做的菜单</p><p class="muted">去「点菜」挑几道喜欢的吧～</p></div>`;return}
+  box.innerHTML=actives.map(o=>{
+    const allDone=o.checks.every(Boolean),totalCount=o.items.reduce((s,i)=>s+i.count,0);
+    return `<div class="order-card">
+      <div class="oc-head"><span class="oc-title">👩‍🍳 待做菜单</span><span class="oc-time">${fmtTime(o.createdAt)}</span></div>
+      <div class="oc-list">
+        ${o.items.map((it,i)=>`<div class="check-item ${o.checks[i]?'done':''}" data-oid="${o.id}" data-idx="${i}">
+          <span class="checkbox">${o.checks[i]?'✓':''}</span>
+          <span class="ci-emoji">${it.img?`<img class="ci-thumb" data-look data-oid="${o.id}" data-idx="${i}" src="${it.img}" alt="">`:it.emoji}</span>
+          <span class="ci-name">${esc(it.name)}</span>
+          <span class="qty">×${it.count}</span>
+          ${it.note?`<span class="note">📝 ${esc(it.note)}</span>`:''}
+        </div>`).join('')}
+      </div>
+      <div class="oc-foot">
+        <span>共 ${totalCount} 道 · 完成 ${o.checks.filter(Boolean).length}/${o.items.length}</span>
+        ${allDone?`<button class="btn-primary small" data-finish="${o.id}">上菜啦 🎉</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderHistory(){
+  const box=$('#historyBox'),done=store.orders.filter(o=>o.done);
+  if(!done.length){box.innerHTML=`<div class="empty-big"><span class="eb-emoji">📜</span><p>还没有吃饭记录</p><p class="muted">做完一顿饭就会记在这里啦</p></div>`;return}
+  box.innerHTML=done.map(o=>`
+    <div class="hist-card" data-card="${o.id}">
+      <div class="hist-head">
+        <span class="hist-date">${fmtTime(o.createdAt)}</span>
+        <span class="hist-tools"><span class="hist-tag">已完成</span><button class="hist-del" data-del="${o.id}">🗑</button></span>
+      </div>
+      <div class="hist-items">
+        ${o.items.map((it,idx)=>`<span class="hi">${it.img?`<img class="hi-thumb" data-look data-oid="${o.id}" data-idx="${idx}" src="${it.img}" alt="">`:it.emoji} ${esc(it.name)}${it.count>1?` ×${it.count}`:''}</span>`).join('')}
+      </div>
+      <div class="hist-foot">
+        <span style="font-size:11.5px;color:var(--muted)">${o.doneAt?`开饭于 ${fmtTime(o.doneAt)}`:''}</span>
+        <button class="again" data-again="${o.id}">再来一单 🔁</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderAll(){renderCats();renderDishes();renderCartBar();renderCartSheet();renderKitchen();renderHistory()}
+
+let currentView='order',bodyLocked=false;
+function switchView(v){
+  currentView=v;
+  ['order','kitchen','history'].forEach(k=>{document.getElementById('view-'+k).hidden=(k!==v)});
+  $$('#tabbar button').forEach(b=>b.classList.toggle('active',b.dataset.view===v));
+  if(v==='kitchen')renderKitchen();if(v==='history')renderHistory();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function lockBody(){if(bodyLocked)return;bodyLocked=true;document.documentElement.style.overflow='hidden';document.body.style.overflow='hidden'}
+function unlockBody(){if(!bodyLocked)return;bodyLocked=false;document.documentElement.style.overflow='';document.body.style.overflow=''}
+function openSheet(el){el.classList.add('show');$('#mask').classList.add('show');lockBody()}
+function closeAllPanels(){$$('.sheet').forEach(s=>s.classList.remove('show'));$('#drawer').classList.remove('show');$('#mask').classList.remove('show');$('#lightbox').classList.remove('show');unlockBody()}
+
+let toastTimer;
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),1900)}
+
+let lbDishId=null;
+function showLightbox(src,name,meta,dishId){
+  if(!src)return;lbDishId=dishId||null;
+  $('#lbImg').src=src;$('#lbName').textContent=name||'';$('#lbMeta').textContent=meta||'';
+  const addBtn=$('#lbAdd');
+  if(dishId){const c=cartItem(dishId);addBtn.style.display='';addBtn.textContent=c?`再加一份 · 已选 ${c.count}`:'加入清单 🧺'}
+  else addBtn.style.display='none';
+  $('#lightbox').classList.add('show');lockBody();
+}
+function closeLightbox(){$('#lightbox').classList.remove('show');lbDishId=null;const otherOpen=document.querySelector('.sheet.show')||$('#drawer').classList.contains('show');if(!otherOpen)unlockBody()}
+function openDishLightbox(id){const d=getDish(id);if(!d||!d.img)return;showLightbox(d.img,d.name,`${d.cat} · 约 ${d.time} 分钟`,d.id)}
+
+function fileToCompressedDataURL(file,maxSize=480,quality=0.75){
+  return new Promise((resolve,reject)=>{
+    if(!file||!/^image\//.test(file.type))return reject(new Error('not image'));
+    const reader=new FileReader();
+    reader.onload=()=>{
+      const img=new Image();
+      img.onload=()=>{
+        let w=img.naturalWidth||img.width,h=img.naturalHeight||img.height;
+        if(!w||!h)return reject(new Error('bad image'));
+        if(w>h&&w>maxSize){h=Math.round(h*maxSize/w);w=maxSize}
+        else if(h>=w&&h>maxSize){w=Math.round(w*maxSize/h);h=maxSize}
+        const cv=document.createElement('canvas');cv.width=w;cv.height=h;
+        const ctx=cv.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);ctx.drawImage(img,0,0,w,h);
+        try{resolve(cv.toDataURL('image/jpeg',quality))}catch(e){reject(e)}
+      };
+      img.onerror=()=>reject(new Error('load error'));
+      img.src=reader.result;
+    };
+    reader.onerror=()=>reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
+function addDish(id){
+  const it=cartItem(id);
+  if(it)it.count++;else store.cart.push({id,count:1,note:''});
+  save();renderDishes();renderCartBar();renderCartSheet();
+}
+function changeCount(id,delta){
+  const it=cartItem(id);if(!it)return;
+  it.count+=delta;if(it.count<=0)store.cart=store.cart.filter(c=>c.id!==id);
+  save();renderDishes();renderCartBar();renderCartSheet();
+}
+function confirmDeleteDish(id){
+  const d=getDish(id);if(!d)return false;
+  if(!confirm(`确定从菜单中删除「${d.name}」吗？`))return false;
+  store.dishes=store.dishes.filter(x=>x.id!==id);
+  store.cart=store.cart.filter(c=>c.id!==id);
+  if(editingId===id)editingId=null;
+  save();renderDishes();renderCartBar();renderCartSheet();toast('菜品已删除 🗑');return true;
+}
+function submitOrder(){
+  if(!store.cart.length)return;
+  const items=store.cart.map(c=>{const d=getDish(c.id);return{name:d.name,emoji:d.emoji,img:d.img||null,count:c.count,note:(c.note||'').trim()}});
+  store.orders.unshift({id:Date.now(),createdAt:Date.now(),items,checks:items.map(()=>false),done:false,doneAt:null});
+  store.cart=[];save();closeAllPanels();renderAll();switchView('kitchen');toast('点好啦，等开饭 🍚');
+}
+function toggleCheck(oid,idx){const o=store.orders.find(x=>x.id===Number(oid));if(!o)return;o.checks[idx]=!o.checks[idx];save();renderKitchen()}
+function finishOrder(oid){const o=store.orders.find(x=>x.id===Number(oid));if(!o)return;o.done=true;o.doneAt=Date.now();save();renderKitchen();renderHistory();toast('开饭啦，辛苦了 ❤️')}
+function deleteHistory(oid){
+  const id=Number(oid),o=store.orders.find(x=>x.id===id);if(!o)return;
+  const preview=o.items.slice(0,3).map(i=>i.name).join('、')+(o.items.length>3?` 等${o.items.length}道`:'');
+  if(!confirm(`确定删除这条记录吗？\n${fmtTime(o.createdAt)} · ${preview}`))return;
+  const card=document.querySelector(`.hist-card[data-card="${id}"]`);
+  if(card){card.style.opacity='0';card.style.transform='translateX(24px)'}
+  setTimeout(()=>{store.orders=store.orders.filter(x=>x.id!==id);save();renderHistory();toast('记录已删除 🗑')},220);
+}
+
+function renderThemePanel(){
+  const t=store.theme,bg=t.bgImg||'',bgOp=t.bgImgOpacity==null?100:t.bgImgOpacity;
+  $('#themeBody').innerHTML=`
+    <div class="drawer-head"><h3>🎨 换装间</h3><button class="icon-btn small" id="closeTheme">✕</button></div>
+    <div class="row"><label>主题预设</label><div class="preset-grid">
+      ${PRESETS.map(p=>`<button class="preset ${t.preset===p.id?'on':''}" data-preset="${p.id}"><span class="swatch" style="background:linear-gradient(135deg,${p.primary},${p.accent})"></span><span>${p.name}</span></button>`).join('')}
+    </div></div>
+    <div class="row"><label>主色调</label><input type="color" id="cPrimary" value="${t.primary}" style="width:100%;height:44px;border:2px solid var(--primary-soft);border-radius:15px;background:var(--card);padding:4px;cursor:pointer"></div>
+    <div class="row"><label>背景色</label><input type="color" id="cBg" value="${t.bg}" style="width:100%;height:44px;border:2px solid var(--primary-soft);border-radius:15px;background:var(--card);padding:4px;cursor:pointer"></div>
+    <div class="row"><label>卡片色</label><input type="color" id="cCard" value="${t.card}" style="width:100%;height:44px;border:2px solid var(--primary-soft);border-radius:15px;background:var(--card);padding:4px;cursor:pointer"></div>
+    <div class="row"><label>文字色</label><input type="color" id="cText" value="${t.text}" style="width:100%;height:44px;border:2px solid var(--primary-soft);border-radius:15px;background:var(--card);padding:4px;cursor:pointer"></div>
+    <div class="row"><label>背景照片 <span style="opacity:.65;font-weight:600">（可选）</span></label>
+      <div class="upload-box" id="bgUploadBox">
+        ${bg?`<img class="up-img" src="${bg}" alt=""><button class="rm" data-rm-bg>✕</button>`:`<div class="ph">🖼️ 点击上传背景照片<small>可选 · 会铺满整个页面</small></div>`}
+        <input type="file" id="bgImgInput" accept="image/*" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
+      </div>
+    </div>
+    <div class="row"><label>背景透明度 <b id="bgOpVal">${bgOp}%</b></label><input type="range" id="rBgOp" min="0" max="100" value="${bgOp}"></div>
+    <div class="row"><label>圆角大小 <b id="radVal">${t.radius}px</b></label><input type="range" id="rRadius" min="0" max="36" value="${t.radius}"></div>
+    <div class="row"><label>阴影强度 <b id="shVal">${t.shadow.toFixed(1)}</b></label><input type="range" id="rShadow" min="0" max="2" step="0.1" value="${t.shadow}"></div>
+    <div class="row"><label>字体风格</label><div class="seg" id="fontSeg">${Object.keys(FONTS).map(k=>`<button data-font="${k}" class="${t.font===k?'on':''}">${FONT_NAMES[k]}</button>`).join('')}</div></div>
+    <div class="row" style="display:flex;align-items:center;justify-content:space-between"><label style="margin:0">波点背景装饰</label><button class="switch ${t.deco?'on':''}" id="swDeco"><span></span></button></div>
+    <button class="btn-ghost" id="resetTheme">恢复默认（可爱风）</button>
+    <p class="tip">设置会自动保存在本机哦～</p>
+  `;
+  bindThemeEvents();
+}
+function bindThemeEvents(){
+  $$('#themeBody [data-preset]').forEach(btn=>{btn.onclick=()=>{const p=PRESETS.find(x=>x.id===btn.dataset.preset);Object.assign(store.theme,{preset:p.id,primary:p.primary,accent:p.accent,bg:p.bg,card:p.card,text:p.text});applyTheme();save();renderThemePanel();toast('已换上「'+p.name+'」✨')}});
+  const bindColor=(sel,key)=>{const el=$(sel);if(!el)return;el.addEventListener('input',e=>{store.theme[key]=e.target.value;store.theme.preset='';applyTheme();save()})};
+  bindColor('#cPrimary','primary');bindColor('#cBg','bg');bindColor('#cCard','card');bindColor('#cText','text');
+  const bgBox=$('#bgUploadBox');
+  if(bgBox){bgBox.addEventListener('click',e=>{if(e.target.id==='bgImgInput')return;if(e.target.closest('[data-rm-bg]')){store.theme.bgImg='';applyTheme();save();renderThemePanel();toast('已移除背景照片');return}const input=$('#bgImgInput');if(input)input.click()});
+    const bgInput=$('#bgImgInput');
+    if(bgInput)bgInput.addEventListener('change',e=>{const file=e.target.files&&e.target.files[0];handleBgFile(file);e.target.value=''});
+  }
+  const rBg=$('#rBgOp');if(rBg)rBg.addEventListener('input',e=>{store.theme.bgImgOpacity=Number(e.target.value);const v=$('#bgOpVal');if(v)v.textContent=store.theme.bgImgOpacity+'%';applyTheme();save()});
+  const rR=$('#rRadius');if(rR)rR.addEventListener('input',e=>{store.theme.radius=Number(e.target.value);$('#radVal').textContent=store.theme.radius+'px';applyTheme();save()});
+  const rS=$('#rShadow');if(rS)rS.addEventListener('input',e=>{store.theme.shadow=Number(e.target.value);$('#shVal').textContent=store.theme.shadow.toFixed(1);applyTheme();save()});
+  $$('#fontSeg button').forEach(b=>{b.onclick=()=>{store.theme.font=b.dataset.font;$$('#fontSeg button').forEach(x=>x.classList.toggle('on',x===b));applyTheme();save()}});
+  const sw=$('#swDeco');if(sw)sw.onclick=()=>{store.theme.deco=!store.theme.deco;sw.classList.toggle('on',store.theme.deco);applyTheme();save()};
+  const rs=$('#resetTheme');if(rs)rs.onclick=()=>{store.theme={...DEFAULT_THEME};applyTheme();save();renderThemePanel();toast('已恢复可爱风 🎀')};
+  const ct=$('#closeTheme');if(ct)ct.onclick=closeAllPanels;
+}
+async function handleBgFile(file){
+  if(!file)return;
+  try{toast('正在处理背景照片…');const data=await fileToCompressedDataURL(file,1200,0.72);store.theme.bgImg=data;if(store.theme.bgImgOpacity==null)store.theme.bgImgOpacity=100;applyTheme();save();renderThemePanel();toast('背景已更新 🖼️')}
+  catch(err){console.warn(err);toast('这张图片读不出来，换一张试试 🥲')}
+}
+
+const EMOJIS=['🍲','🍛','🍜','🍝','🥘','🍗','🍖','🥩','🐟','🍤','🥟','🍚','🍙','🍞','🥗','🥦','🍅','🌽','🥕','🍆','🍄','🍮','🍰','🍉','🍋','🧋','🥛','🍳'];
+let pickedEmoji='🍲',pickedCat='家常菜',pendingImg=null,editingId=null;
+
+function renderImgPreview(){
+  const box=$('#imgPreview');
+  if(pendingImg)box.innerHTML=`<img class="up-img" src="${pendingImg}" alt=""><button class="rm" data-rm title="移除照片">✕</button>`;
+  else box.innerHTML=`<div class="ph">📷 点击上传菜品照片<small>可选 · 不上传就用下方的图标</small></div>`;
+}
+function openAddSheet(dish){
+  editingId=dish?dish.id:null;pickedEmoji=dish?dish.emoji:'🍲';pickedCat=dish?dish.cat:'家常菜';pendingImg=dish?(dish.img||null):null;
+  $('#addSheetTitle').textContent=dish?'✏️ 编辑菜品':'➕ 添加一道菜';
+  $('#saveDish').textContent=dish?'保存修改':'加入菜单';
+  $('#deleteDish').style.display=dish?'block':'none';
+  $('#newName').value=dish?dish.name:'';
+  $('#emojiPick').innerHTML=EMOJIS.map(e=>`<span data-emoji="${e}" class="${e===pickedEmoji?'on':''}">${e}</span>`).join('');
+  $$('#newCatSeg button').forEach(b=>b.classList.toggle('on',b.dataset.cat===pickedCat));
+  renderImgPreview();openSheet($('#addSheet'));
+  setTimeout(()=>{if(!dish)$('#newName').focus()},320);
+}
+async function handleImageFile(file){
+  if(!file)return;
+  try{toast('正在处理照片…');const data=await fileToCompressedDataURL(file);pendingImg=data;renderImgPreview();toast('照片已添加 📷')}
+  catch(err){console.warn(err);toast('这张图片读不出来，换一张试试 🥲')}
+}
+function saveNewDish(){
+  const name=$('#newName').value.trim();
+  if(!name){toast('先给它起个名字吧 ✏️');return}
+  if(editingId){
+    const d=getDish(editingId);if(!d)return;
+    d.name=name;d.cat=pickedCat;d.emoji=pickedEmoji;d.img=pendingImg||undefined;
+    save();closeAllPanels();renderAll();toast('已保存修改 ✅');
+  }else{
+    store.dishes.push({id:'u'+Date.now(),name,cat:pickedCat,emoji:pickedEmoji,time:20,img:pendingImg||undefined});
+    save();closeAllPanels();renderDishes();toast('已加入菜单 🎉');
+  }
+}
+function deleteDishFromMenu(){if(!editingId)return;const id=editingId;if(confirmDeleteDish(id))closeAllPanels()}
+
+function randomPick(){
+  const pool=store.dishes.slice();if(!pool.length)return;
+  const picked=[];const n=Math.min(3,pool.length);
+  for(let i=0;i<n;i++){const idx=Math.floor(Math.random()*pool.length);picked.push(pool.splice(idx,1)[0])}
+  picked.forEach(d=>{const it=cartItem(d.id);if(it)it.count++;else store.cart.push({id:d.id,count:1,note:''})});
+  save();renderDishes();renderCartBar();renderCartSheet();
+  toast(`随机给你挑了：${picked.map(d=>d.name).join('、')} 🎲`);
+}
+
+let pressTimer=null,longPressed=false,pressStart=null;
+function clearPress(){if(pressTimer){clearTimeout(pressTimer);pressTimer=null}pressStart=null}
+
+function setupKeyboardFix(){
+  if(!window.visualViewport)return;
+  const vv=window.visualViewport,r=document.documentElement;let raf=null;
+  function update(){if(raf)return;raf=requestAnimationFrame(()=>{raf=null;const vh=window.innerHeight,vvH=vv.height,kb=Math.max(0,vh-vvH);r.style.setProperty('--kb',kb>100?kb+'px':'0px')})}
+  vv.addEventListener('resize',update);vv.addEventListener('scroll',update);update();
+}
+
+function bindEvents(){
+  $('#themeBtn').onclick=()=>{renderThemePanel();$('#drawer').classList.add('show');$('#mask').classList.add('show');lockBody()};
+  $('#tabbar').addEventListener('click',e=>{const btn=e.target.closest('button[data-view]');if(btn)switchView(btn.dataset.view)});
+
+  $('#cats').addEventListener('click',e=>{
+    if(e.target.closest('#randomBtn')){randomPick();return}
+    const chip=e.target.closest('.cat-chip[data-cat]');if(!chip)return;
+    store.activeCat=chip.dataset.cat;save();renderCats();renderDishes();
+  });
+
+  const grid=$('#dishGrid');
+  grid.addEventListener('click',e=>{
+    if(longPressed){longPressed=false;return}
+    const del=e.target.closest('.dish-del');
+    if(del){e.stopPropagation();confirmDeleteDish(del.dataset.delDish);return}
+    if(e.target.closest('#addDishBtn')){openAddSheet(null);return}
+    const card=e.target.closest('.dish[data-id]');if(!card)return;
+    const d=getDish(card.dataset.id);if(!d)return;
+    if(d.img)openDishLightbox(d.id);else addDish(d.id);
+  });
+  grid.addEventListener('pointerdown',e=>{
+    if(e.target.closest('.dish-del')||e.target.closest('#addDishBtn'))return;
+    const card=e.target.closest('.dish[data-id]');if(!card)return;
+    longPressed=false;pressStart={x:e.clientX,y:e.clientY};clearPress();
+    pressTimer=setTimeout(()=>{pressTimer=null;longPressed=true;if(navigator.vibrate)navigator.vibrate(18);const d=getDish(card.dataset.id);if(d)openAddSheet(d)},600);
+  });
+  grid.addEventListener('pointermove',e=>{if(!pressStart||!pressTimer)return;const dx=Math.abs(e.clientX-pressStart.x),dy=Math.abs(e.clientY-pressStart.y);if(dx>10||dy>10)clearPress()});
+  ['pointerup','pointercancel','pointerleave'].forEach(ev=>grid.addEventListener(ev,clearPress));
+  window.addEventListener('scroll',clearPress,{passive:true});
+  grid.addEventListener('contextmenu',e=>{const card=e.target.closest('.dish[data-id]');if(!card)return;e.preventDefault();const d=getDish(card.dataset.id);if(d)openAddSheet(d)});
+
+  $('#cartBar').addEventListener('click',e=>{if(e.target.closest('#openCart')){renderCartSheet();openSheet($('#cartSheet'))}});
+
+  $('#cartList').addEventListener('click',e=>{
+    const look=e.target.closest('.ci-thumb[data-look]');
+    if(look){openDishLightbox(look.dataset.dish);return}
+    const inc=e.target.closest('[data-inc]'),dec=e.target.closest('[data-dec]');
+    if(inc)changeCount(inc.dataset.inc,+1);
+    if(dec)changeCount(dec.dataset.dec,-1);
+  });
+  $('#cartList').addEventListener('input',e=>{const n=e.target.closest('[data-note]');if(!n)return;const it=cartItem(n.dataset.note);if(it){it.note=n.value;save()}});
+  $('#submitOrder').onclick=submitOrder;
+
+  $('#kitchenBox').addEventListener('click',e=>{
+    const look=e.target.closest('.ci-thumb[data-look]');
+    if(look){const o=store.orders.find(x=>x.id===Number(look.dataset.oid));if(o){const it=o.items[Number(look.dataset.idx)];if(it&&it.img)showLightbox(it.img,it.name,`厨房菜单 · ${fmtTime(o.createdAt)}`,null)}return}
+    const finish=e.target.closest('[data-finish]');if(finish){finishOrder(finish.dataset.finish);return}
+    const item=e.target.closest('.check-item');if(item)toggleCheck(item.dataset.oid,Number(item.dataset.idx));
+  });
+
+  $('#historyBox').addEventListener('click',e=>{
+    const look=e.target.closest('.hi-thumb[data-look]');
+    if(look){const o=store.orders.find(x=>x.id===Number(look.dataset.oid));if(o){const it=o.items[Number(look.dataset.idx)];if(it&&it.img)showLightbox(it.img,it.name,`吃饭记录 · ${fmtTime(o.createdAt)}`,null)}return}
+    const del=e.target.closest('[data-del]');if(del){deleteHistory(del.dataset.del);return}
+    const again=e.target.closest('[data-again]');if(!again)return;
+    const o=store.orders.find(x=>x.id===Number(again.dataset.again));if(!o)return;
+    o.items.forEach(it=>{const d=store.dishes.find(x=>x.name===it.name);if(!d)return;const c=cartItem(d.id);if(c)c.count+=it.count;else store.cart.push({id:d.id,count:it.count,note:it.note||''})});
+    save();renderDishes();renderCartBar();renderCartSheet();switchView('order');toast('已放回点菜清单 🧺');
+  });
+
+  $('#lbClose').onclick=closeLightbox;
+  $('#lightbox').addEventListener('click',e=>{if(e.target===$('#lightbox'))closeLightbox()});
+  $('#lbAdd').onclick=()=>{if(!lbDishId)return;addDish(lbDishId);closeLightbox();toast('已加入清单 🧺')};
+
+  $('#mask').onclick=closeAllPanels;
+  document.addEventListener('click',e=>{if(e.target.closest('[data-close]'))closeAllPanels()});
+
+  $('#newCatSeg').addEventListener('click',e=>{const b=e.target.closest('button[data-cat]');if(!b)return;pickedCat=b.dataset.cat;$$('#newCatSeg button').forEach(x=>x.classList.toggle('on',x===b))});
+  $('#emojiPick').addEventListener('click',e=>{const s=e.target.closest('[data-emoji]');if(!s)return;pickedEmoji=s.dataset.emoji;$$('#emojiPick span').forEach(x=>x.classList.toggle('on',x===s))});
+
+  $('#uploadBox').addEventListener('click',e=>{
+    if(e.target.id==='imgInput')return;
+    if(e.target.closest('[data-rm]')){pendingImg=null;renderImgPreview();toast('已移除照片');return}
+    const input=$('#imgInput');if(input)input.click();
+  });
+  $('#imgInput').addEventListener('change',e=>{const file=e.target.files&&e.target.files[0];handleImageFile(file);e.target.value=''});
+
+  $('#saveDish').onclick=saveNewDish;
+  $('#deleteDish').onclick=deleteDishFromMenu;
+  $('#newName').addEventListener('keydown',e=>{if(e.key==='Enter')saveNewDish()});
+
+  document.addEventListener('focusin',e=>{
+    const el=e.target;if(!el||!/^(INPUT|TEXTAREA)$/.test(el.tagName))return;
+    const sheet=el.closest('.sheet');if(!sheet)return;
+    setTimeout(()=>{try{el.scrollIntoView({block:'center',behavior:'smooth'})}catch(err){try{el.scrollIntoView()}catch(_){}}},320);
+  });
+
+  document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if($('#lightbox').classList.contains('show')){closeLightbox();return}closeAllPanels()});
+}
+
+function init(){load();applyTheme();bindEvents();setupKeyboardFix();renderAll();switchView('order')}
+init();
+</script>
+</body>
+</html>
